@@ -119,13 +119,13 @@ final class TimelineView: UIView, EventDateProtocol, CalendarTimer {
     
     private func setOffsetScrollView(allDayEventsCount: Int) {
         var offsetY: CGFloat = 0
+        
         if allDayEventsCount > 0 {
-            if 3...4 ~= allDayEventsCount {
-                offsetY = style.allDay.height * 2
-            } else if allDayEventsCount > 4 {
-                offsetY = style.allDay.maxHeight
+            if allDayEventsCount > style.allDay.maxItems {
+                let additionalOffset = style.allDay.height / 2
+                offsetY = (style.allDay.height * CGFloat(style.allDay.maxItems)) + additionalOffset
             } else {
-                offsetY = style.allDay.height
+                offsetY = CGFloat(allDayEventsCount) * style.allDay.height
             }
         }
         

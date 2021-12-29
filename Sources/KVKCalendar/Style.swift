@@ -448,7 +448,7 @@ public struct AllDayStyle {
     public var offsetHeight: CGFloat = 2
     public var offsetX: CGFloat = 0
     public var height: CGFloat = 25
-    public var maxHeight: CGFloat = 70
+    public var maxItems: Int = 2
     public var fontTitle: UIFont = .systemFont(ofSize: 10)
     public var isPinned: Bool = true
     public var eventCorners: UIRectCorner = .allCorners
@@ -831,7 +831,7 @@ extension AllDayStyle: Equatable {
         && compare(\.offsetWidth)
         && compare(\.offsetHeight)
         && compare(\.height)
-        && compare(\.maxHeight)
+        && compare(\.maxItems)
         && compare(\.offsetX)
         && compare(\.fontTitle)
         && compare(\.isPinned)

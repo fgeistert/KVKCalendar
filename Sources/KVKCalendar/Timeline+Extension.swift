@@ -267,11 +267,14 @@ extension TimelineView {
         guard !events.isEmpty else { return }
         
         var allDayHeight = style.allDay.height
-        if 3...4 ~= maxEvents {
-            allDayHeight *= 2
-        } else if maxEvents > 4 {
-            allDayHeight = style.allDay.maxHeight
+        
+        if maxEvents > style.allDay.maxItems {
+            let additionalOffset = style.allDay.height / 2
+            allDayHeight = (style.allDay.height * CGFloat(style.allDay.maxItems)) + additionalOffset
+        } else {
+            allDayHeight = CGFloat(maxEvents) * style.allDay.height
         }
+        
         let y: CGFloat
         if style.allDay.isPinned {
             y = 0
