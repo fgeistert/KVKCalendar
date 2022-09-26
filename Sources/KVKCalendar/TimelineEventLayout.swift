@@ -11,6 +11,7 @@ import UIKit
 
 public struct TimelineEventLayoutContext {
     public let style: Style
+    let type: CalendarType
     let pageFrame: CGRect
     let startHour: Int
     let timeLabels: [TimelineLabel]
@@ -28,38 +29,42 @@ public extension TimelineEventLayoutContext {
         var newFrame = pageFrame
         let midnight = 24
 
-        for time in timeLabels {
-            // calculate position 'y'
-            if start.hour.hashValue == time.valueHash, start.day == date?.day {
-                if time.tag == midnight, let newTime = timeLabels.first(where: { $0.tag == 0 }) {
-                    newFrame.origin.y = calculatePointYByMinute(start.minute, newTime)
+        timeLabels.forEach { (time) in
+            // calculate position 'y' event
+            if start.kvkHour == time.hashTime && start.kvkDay == date?.kvkDay {
+                if time.tag == midnight, let newTime = timeLabels.first {
+                    newFrame.origin.y = calculatePointYByMinute(start.kvkMinute, newTime)
                 } else {
-                    newFrame.origin.y = calculatePointYByMinute(start.minute, time)
+                    newFrame.origin.y = calculatePointYByMinute(start.kvkMinute, time)
                 }
-            } else if let firstTimeLabel = getTimelineLabel(startHour), start.day != date?.day {
+            } else if let firstTimeLabel = getTimelineLabel(startHour), start.kvkDay != date?.kvkDay {
                 newFrame.origin.y = calculatePointYByMinute(startHour, firstTimeLabel)
             }
 
             // calculate 'height' event
             if let defaultHeight = eventStyle?.defaultHeight {
                 newFrame.size.height = defaultHeight
-            } else if let globalDefaultHeight = style.event.defaultHeight {
-                newFrame.size.height = globalDefaultHeight
-            } else if end.hour.hashValue == time.valueHash, end.day == date?.day {
+            } else if end.kvkHour == time.hashTime, end.kvkDay == date?.kvkDay {
+                // to avoid crash https://github.com/kvyatkovskys/KVKCalendar/issues/237
+                if start.kvkHour == end.kvkHour && start.kvkMinute == end.kvkMinute {
+                    newFrame.size.height = 30
+                    return
+                }
+                
                 var timeTemp = time
-                if time.tag == midnight, let newTime = timeLabels.first(where: { $0.tag == 0 }) {
+                if time.tag == midnight, let newTime = timeLabels.first {
                     timeTemp = newTime
                 }
 
                 let summHeight = (CGFloat(timeTemp.tag) * (calculatedTimeY + timeTemp.frame.height)) - newFrame.origin.y + (timeTemp.frame.height / 2)
-                if 0...59 ~= end.minute {
-                    let minutePercent = 59.0 / CGFloat(end.minute)
+                if 0...59 ~= end.kvkMinute {
+                    let minutePercent = 59.0 / CGFloat(end.kvkMinute)
                     let newY = (calculatedTimeY + timeTemp.frame.height) / minutePercent
                     newFrame.size.height = summHeight + newY - style.timeline.offsetEvent
                 } else {
                     newFrame.size.height = summHeight - style.timeline.offsetEvent
                 }
-            } else if end.day != date?.day {
+            } else if end.kvkDay != date?.kvkDay {
                 newFrame.size.height = (CGFloat(time.tag) * (calculatedTimeY + time.frame.height)) - newFrame.origin.y + (time.frame.height / 2)
             }
         }
@@ -80,13 +85,16 @@ public extension TimelineEventLayoutContext {
             let start = event.start.timeIntervalSince1970
             let end = event.end.timeIntervalSince1970
             var crossEventNew = CrossEvent(eventTime: EventTime(start: start, end: end))
-            let endCalculated: TimeInterval = crossEventNew.eventTime.end - TimeInterval(style.timeline.offsetEvent)
+            let endCalculated = crossEventNew.eventTime.end - TimeInterval(style.timeline.offsetEvent)
             crossEventNew.events = events.filter { item in
                 let itemEnd = item.end.timeIntervalSince1970 - TimeInterval(style.timeline.offsetEvent)
                 let itemStart = item.start.timeIntervalSince1970
-                guard itemEnd > itemStart else { return false }
+                guard itemEnd > itemStart && endCalculated > start else { return false }
 
-                return (itemStart...itemEnd).contains(start) || (itemStart...itemEnd).contains(endCalculated) || (start...endCalculated).contains(itemStart) || (start...endCalculated).contains(itemEnd)
+                return (itemStart...itemEnd).contains(start)
+                || (itemStart...itemEnd).contains(endCalculated)
+                || (start...endCalculated).contains(itemStart)
+                || (start...endCalculated).contains(itemEnd)
             }
 
             crossEvents[crossEventNew.eventTime.start] = crossEventNew

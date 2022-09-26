@@ -36,13 +36,17 @@ final class AllDayEventView: UIView {
         bgView.addSubview(textLabel)
         
         textLabel.backgroundColor = event.backgroundColor
-        textLabel.text = event.text
+        textLabel.text = event.title.timeline
         textLabel.textColor = event.textColor
         textLabel.font = style.fontTitle
         
         tag = event.hash
         let tap = UITapGestureRecognizer(target: self, action: #selector(tapOnEvent))
         addGestureRecognizer(tap)
+        
+        if #available(iOS 13.4, *) {
+            addPointInteraction(on: self, delegate: self)
+        }
     }
     
     required init?(coder: NSCoder) {

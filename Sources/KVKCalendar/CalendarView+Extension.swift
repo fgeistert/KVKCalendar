@@ -17,12 +17,12 @@ extension CalendarView {
     @available(*, deprecated, renamed: "CalendarDataSource.willDisplayEventViewer")
     public func addEventViewToDay(view: UIView) {}
     
-    public func set(type: CalendarType, date: Date? = nil) {
+    public func set(type: CalendarType, date: Date? = nil, animated: Bool = true) {
         parameters.type = type
-        switchTypeCalendar(type: type)
+        switchCalendarType(type)
         
         if let dt = date {
-            scrollTo(dt)
+            scrollTo(dt, animated: animated)
         }
     }
     
@@ -71,18 +71,18 @@ extension CalendarView {
         }
     }
     
-    public func scrollTo(_ date: Date, animated: Bool? = nil) {
+    public func scrollTo(_ date: Date, animated: Bool = true) {
         switch parameters.type {
         case .day:
-            dayView.setDate(date)
+            dayView.setDate(date, animated: false)
         case .week:
-            weekView.setDate(date)
+            weekView.setDate(date, animated: false)
         case .month:
             monthView.setDate(date, animated: animated)
         case .year:
-            yearView.setDate(date)
+            yearView.setDate(date, animated: animated)
         case .list:
-            listView.setDate(date)
+            listView.setDate(date, animated: animated)
         }
     }
     
@@ -130,6 +130,10 @@ extension CalendarView {
     
     // MARK: Private methods
     
+    private var calendarQueue: DispatchQueue {
+        DispatchQueue(label: "kvk.calendar.com", qos: .default, attributes: .concurrent)
+    }
+    
     private func getSystemEvents(store: EKEventStore, calendars: Set<String>, completion: @escaping ([EKEvent]) -> Void) {
         guard !calendars.isEmpty else {
             completion([])
@@ -142,7 +146,7 @@ extension CalendarView {
             return
         }
         
-        DispatchQueue.global().async { [weak self] in
+        calendarQueue.async { [weak self] in
             guard let self = self else {
                 completion([])
                 return
@@ -173,7 +177,9 @@ extension CalendarView {
         }
     }
     
-    private func requestAccessSystemCalendars(_ calendars: Set<String>, store: EKEventStore, completion: @escaping (Bool) -> Void) {
+    private func requestAccessSystemCalendars(_ calendars: Set<String>,
+                                              store: EKEventStore,
+                                              completion: @escaping (Bool) -> Void) {
         let status = EKEventStore.authorizationStatus(for: .event)
         
         store.requestAccess(to: .event) { (access, error) in
@@ -182,38 +188,46 @@ extension CalendarView {
         }
     }
     
-    private func switchTypeCalendar(type: CalendarType) {
+    private func switchCalendarType(_ type: CalendarType) {
         parameters.type = type
-        currentViewCache?.removeFromSuperview()
+        subviews.forEach { $0.removeFromSuperview() }
         
         switch parameters.type {
         case .day:
             addSubview(dayView)
-            currentViewCache = dayView
         case .week:
             addSubview(weekView)
-            currentViewCache = weekView
         case .month:
             addSubview(monthView)
-            currentViewCache = monthView
         case .year:
             addSubview(yearView)
-            currentViewCache = yearView
+            setupConstraintsForView(yearView)
         case .list:
             addSubview(listView)
-            currentViewCache = listView
+            setupConstraintsForView(listView)
+            listView.setupConstraints()
             reloadData()
-        }
+        }        
+    }
+    
+    private func deactivateConstraintsForView(_ view: UIView) {
+        NSLayoutConstraint.deactivate(view.constraints)
+    }
+    
+    private func setupConstraintsForView(_ view: UIView) {
+        view.translatesAutoresizingMaskIntoConstraints = false
         
-        if let cacheView = currentViewCache as? CalendarSettingProtocol, cacheView.style != style {
-            cacheView.updateStyle(style)
-        }
+        let top = view.topAnchor.constraint(equalTo: topAnchor)
+        let bottom = view.bottomAnchor.constraint(equalTo: bottomAnchor)
+        let left = view.leftAnchor.constraint(equalTo: leftAnchor)
+        let right = view.rightAnchor.constraint(equalTo: rightAnchor)
+        NSLayoutConstraint.activate([top, bottom, left, right])
     }
 }
 
 extension CalendarView: DisplayDataSource {
-    public func dequeueCell<T>(dateParameter: DateParameter, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarCellProtocol? where T : UIScrollView {
-        dataSource?.dequeueCell(dateParameter: dateParameter, type: type, view: view, indexPath: indexPath)
+    public func dequeueCell<T>(parameter: CellParameter, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarCellProtocol? where T : UIScrollView {
+        dataSource?.dequeueCell(parameter: parameter, type: type, view: view, indexPath: indexPath)
     }
     
     public func dequeueHeader<T>(date: Date?, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarHeaderProtocol? where T : UIScrollView {
@@ -249,6 +263,23 @@ extension CalendarView: DisplayDataSource {
     public func dequeueMonthViewEvents(_ events: [Event], date: Date, frame: CGRect) -> UIView? {
         dataSource?.dequeueMonthViewEvents(events, date: date, frame: frame)
     }
+    
+    public func dequeueAllDayViewEvent(_ event: Event, date: Date, frame: CGRect) -> UIView? {
+        dataSource?.dequeueAllDayViewEvent(event, date: date, frame: frame)
+    }
+    
+    public func dequeueTimeLabel(_ label: TimelineLabel) -> (current: TimelineLabel, others: [UILabel])? {
+        dataSource?.dequeueTimeLabel(label)
+    }
+    
+    public func dequeueAllDayCornerHeader(date: Date, frame: CGRect) -> UIView? {
+        dataSource?.dequeueAllDayCornerHeader(date: date, frame: frame)
+    }
+
+    public func dequeueCornerHeader(date: Date, frame: CGRect) -> UIView? {
+        dataSource?.dequeueCornerHeader(date: date, frame: frame)
+    }
+    
 }
 
 extension CalendarView: DisplayDelegate {
@@ -295,32 +326,76 @@ extension CalendarView: DisplayDelegate {
         newFrame.origin = .zero
         delegate?.didChangeViewerFrame(newFrame)
     }
+    
+    public func willSelectDate(_ date: Date, type: CalendarType) {
+        delegate?.willSelectDate(date, type: type)
+    }
 }
 
-extension CalendarView: CalendarSettingProtocol {
-    var style: Style {
-        parameters.style
+extension CalendarView {
+    
+    public var style: Style {
+        get {
+            parameters.style
+        }
+        set {
+            parameters.style = newValue
+        }
     }
     
     public func reloadFrame(_ frame: CGRect) {
         self.frame = frame
         
-        if let currentView = currentViewCache as? CalendarSettingProtocol {
-            currentView.reloadFrame(frame)
+        viewCaches.values.forEach { (viewCache) in
+            if let currentView = viewCache as? CalendarSettingProtocol, viewCache.frame != frame {
+                currentView.reloadFrame(frame)
+            }
         }
+    }
+    
+    @available(swift, deprecated: 0.6.5, message: "Is no longer used.")
+    public func updateDaysBySectionInWeekView(date: Date? = nil) {
+        var updatedData = calendarData
+        if let dt = date {
+            updatedData = CalendarData(date: dt, years: 4, style: style)
+        }
+        weekView.reloadDays(data: updatedData, style: style)
+        weekView.updateScrollableWeeks()
+        weekView.reloadVisibleDates()
     }
     
     public func updateStyle(_ style: Style) {
-        parameters.style = style.checkStyle
+        let updateDaysInWeek = self.style.week.daysInOneWeek != style.week.daysInOneWeek
+        self.style = style.adaptiveStyle
         
-        if let currentView = currentViewCache as? CalendarSettingProtocol {
-            currentView.updateStyle(self.style)
+        if updateDaysInWeek {
+            weekView.reloadDays(data: calendarData, style: self.style)
+        }
+        
+        reloadAllStyles(self.style, force: false)
+        
+        if updateDaysInWeek {
+            weekView.reloadVisibleDates()
+        }
+        
+        switch parameters.type {
+        case .month:
+            monthView.setDate(monthData.date, animated: true)
+        case .year:
+            yearView.setDate(yearData.date, animated: true)
+        default:
+            break
         }
     }
     
-    func setUI() {
-        
+    func reloadAllStyles(_ style: Style, force: Bool) {
+        viewCaches.values.forEach { (viewCache) in
+            if let currentView = viewCache as? CalendarSettingProtocol {
+                currentView.updateStyle(style, force: force)
+            }
+        }
     }
+
 }
 
 #endif

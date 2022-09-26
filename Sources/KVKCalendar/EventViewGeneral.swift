@@ -34,11 +34,9 @@ open class EventViewGeneral: UIView, CalendarTimer {
     
     public let optionButton: UIButton = {
         let button = UIButton(type: .infoLight)
-        #if !targetEnvironment(macCatalyst)
         if #available(iOS 14.0, macCatalyst 14.0, *) {
             button.showsMenuAsPrimaryAction = true
         }
-        #endif
         return button
     }()
     
@@ -116,14 +114,11 @@ open class EventViewGeneral: UIView, CalendarTimer {
                         
                         self.stateEvent = .move
                         self.delegate?.didEndResizeEvent(self.event, gesture: gesture)
-                        
-                        UIImpactFeedbackGenerator().impactOccurred()
                         self.alpha = self.style.event.alphaWhileMoving
                         self.delegate?.didStartMovingEvent(self.event, gesture: gesture, view: self)
                     }
                 }
                 
-                UIImpactFeedbackGenerator().impactOccurred()
                 delegate?.didStartResizeEvent(event, gesture: gesture, view: self)
             case .move:
                 guard isAvailableMove else { return }
@@ -143,9 +138,7 @@ open class EventViewGeneral: UIView, CalendarTimer {
             case .resize where distance > 15 && isAvailableResize:
                 stopTimer()
                 stateEvent = .move
-                delegate?.didEndResizeEvent(event, gesture: gesture)
-                
-                UIImpactFeedbackGenerator().impactOccurred()
+                delegate?.didEndResizeEvent(event, gesture: gesture)                
                 alpha = style.event.alphaWhileMoving
                 delegate?.didStartMovingEvent(event, gesture: gesture, view: self)
             case .move:
@@ -190,15 +183,15 @@ open class EventViewGeneral: UIView, CalendarTimer {
 
 extension EventViewGeneral {
     var isAvailableResize: Bool {
-        return states.contains(.resize)
+        states.contains(.resize)
     }
     
     var isAvailableMove: Bool {
-        return states.contains(.move)
+        states.contains(.move)
     }
     
     var isAvailableOnlyMove: Bool {
-        return states.contains(.move) && states.count == 1
+        states.contains(.move) && states.count == 1
     }
 }
 

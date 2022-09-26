@@ -14,23 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "607FACCF1AFB9204008FA782"
-               BuildableName = "KVKCalendar_Example.app"
-               BlueprintName = "KVKCalendar_Example"
-               ReferencedContainer = "container:KVKCalendar.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "607FACE41AFB9204008FA782"
-               BuildableName = "KVKCalendar_Tests.xctest"
-               BlueprintName = "KVKCalendar_Tests"
+               BlueprintIdentifier = "F9E6F6F8281F0C13000AEADD"
+               BuildableName = "KVKCalendar_Example_SwiftUI.app"
+               BlueprintName = "KVKCalendar_Example_SwiftUI"
                ReferencedContainer = "container:KVKCalendar.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -42,16 +28,6 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "607FACE41AFB9204008FA782"
-               BuildableName = "KVKCalendar_Tests.xctest"
-               BlueprintName = "KVKCalendar_Tests"
-               ReferencedContainer = "container:KVKCalendar.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
@@ -68,9 +44,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "607FACCF1AFB9204008FA782"
-            BuildableName = "KVKCalendar_Example.app"
-            BlueprintName = "KVKCalendar_Example"
+            BlueprintIdentifier = "F9E6F6F8281F0C13000AEADD"
+            BuildableName = "KVKCalendar_Example_SwiftUI.app"
+            BlueprintName = "KVKCalendar_Example_SwiftUI"
             ReferencedContainer = "container:KVKCalendar.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -85,9 +61,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "607FACCF1AFB9204008FA782"
-            BuildableName = "KVKCalendar_Example.app"
-            BlueprintName = "KVKCalendar_Example"
+            BlueprintIdentifier = "F9E6F6F8281F0C13000AEADD"
+            BuildableName = "KVKCalendar_Example_SwiftUI.app"
+            BlueprintName = "KVKCalendar_Example_SwiftUI"
             ReferencedContainer = "container:KVKCalendar.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

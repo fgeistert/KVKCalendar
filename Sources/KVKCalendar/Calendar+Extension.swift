@@ -9,6 +9,41 @@
 
 import UIKit
 
+enum Platform: Int {
+    case phone, pad, mac, none
+    
+    static var currentDevice: Platform {
+        switch UIDevice.current.userInterfaceIdiom {
+        case .phone:
+            return .phone
+        case .pad:
+            return .pad
+        case .mac:
+            return .mac
+        default:
+            return .none
+        }
+    }
+    
+    static var currentInterface: Platform {
+        switch currentDevice {
+        case .pad:
+            if let vc = UIApplication.shared.windows.first(where: { $0.isKeyWindow })?.rootViewController {
+                if vc.view.bounds.width < 600 {
+                    return .phone
+                } else {
+                    return .pad
+                }
+            } else {
+                return .pad
+            }
+        default:
+            return currentDevice
+        }
+    }
+        
+}
+
 private enum AssociatedKeys {
     static var timer: UInt8 = 0
 }
@@ -29,18 +64,26 @@ extension CalendarTimer {
     }
     
     func isValidTimer(_ key: String = "Timer") -> Bool {
-        return timers[key]?.isValid == true
+        timers[key]?.isValid == true
     }
     
     func startTimer(_ key: String = "Timer", interval: TimeInterval = 1, repeats: Bool = false, addToRunLoop: Bool = false, action: @escaping () -> Void) {
-        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: repeats, block: { _ in
-            action()
-        })
+        
+        let timer: Timer
+        if addToRunLoop {
+            timer = Timer(timeInterval: interval, repeats: repeats) { (_) in
+                action()
+            }
+        } else {
+            timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: repeats) { (_) in
+                action()
+            }
+        }
         
         timers[key] = timer
         
         if addToRunLoop {
-            RunLoop.current.add(timer, forMode: .default)
+            RunLoop.current.add(timer, forMode: .common)
         }
     }
     
@@ -49,7 +92,7 @@ extension CalendarTimer {
 extension UIScrollView {
     
    var currentPage: Int {
-      return Int((contentOffset.x + (0.5 * frame.width)) / frame.width) + 1
+       Int((contentOffset.x + (0.5 * frame.width)) / frame.width) + 1
    }
     
 }
@@ -65,8 +108,7 @@ extension UIApplication {
                 .filter({ $0.isKeyWindow }).first
             {
                 return keyWindow.safeAreaInsets.bottom > 0
-            } else if let keyWindow = UIApplication.shared.windows.first(where: { $0.isKeyWindow })
-            {
+            } else if let keyWindow = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) {
                 return keyWindow.safeAreaInsets.bottom > 0
             } else {
                 return false
@@ -107,6 +149,32 @@ extension Collection {
     
     subscript (safe index: Index) -> Iterator.Element? {
         return indices.contains(index) ? self[index] : nil
+    }
+    
+}
+
+extension Collection where Self == [Event] {
+    
+    var splitEvents: [Event.EventType: [Event]] {
+        reduce([:]) { (acc, event) -> [Event.EventType: [Event]] in
+            var accTemp = acc
+            if event.isAllDay {
+                if var values = accTemp[.allDay] {
+                    values.append(event)
+                    accTemp[.allDay] = values
+                } else {
+                    accTemp[.allDay] = [event]
+                }
+            } else {
+                if var values = accTemp[.usual] {
+                    values.append(event)
+                    accTemp[.usual] = values
+                } else {
+                    accTemp[.usual] = [event]
+                }
+            }
+            return accTemp
+        }
     }
     
 }

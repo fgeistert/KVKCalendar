@@ -79,14 +79,14 @@ struct CalendarData {
     
     func getDaysInMonth(month: Int, date: Date) -> [Day] {
         let calendar = style.calendar
-        var dateComponents = DateComponents(year: date.year, month: month)
+        var dateComponents = DateComponents(year: date.kvkYear, month: month)
         dateComponents.day = 1
         guard let dateMonth = calendar.date(from: dateComponents), let range = calendar.range(of: .day, in: .month, for: dateMonth) else { return [] }
         
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate, .withDashSeparatorInDate]
         formatter.timeZone = style.timezone
-        let arrDates = Array(range.lowerBound..<range.upperBound).compactMap({ formatter.date(from: "\(date.year)-\(month)-\($0)") })
+        let arrDates = Array(range.lowerBound..<range.upperBound).compactMap({ formatter.date(from: "\(date.kvkYear)-\(month)-\($0)") })
 
         let formatterDay = DateFormatter()
         formatterDay.dateFormat = "EE"
@@ -95,10 +95,10 @@ struct CalendarData {
         return days
     }
     
-    func addStartEmptyDays(_ days: [Day], startDay: StartDayType) -> [Day] {
+    func addStartEmptyDays(_ days: [Day], startDay: StartDayType, maxDaysInWeek: Int? = nil) -> [Day] {
         var tempDays = [Day]()
         if let firstDay = days.first {
-            var endIdx = (firstDay.date?.weekday ?? 1)
+            var endIdx = (firstDay.date?.kvkWeekday ?? 1)
             
             switch startDay {
             case .monday:
@@ -123,7 +123,7 @@ struct CalendarData {
         return tempDays
     }
     
-    func addEndEmptyDays(_ days: [Day], startDay: StartDayType) -> [Day] {
+    func addEndEmptyDays(_ days: [Day], startDay: StartDayType, maxDaysInWeek: Int? = nil) -> [Day] {
         var tempDays = [Day]()
         if let lastDay = days.last {
             var emptyDays = [Day]()
@@ -135,7 +135,7 @@ struct CalendarData {
             case .monday:
                 maxIdx = 7
             }
-            let lastIdx = (lastDay.date?.weekday ?? 1) - 1
+            let lastIdx = (lastDay.date?.kvkWeekday ?? 1) - 1
             
             if maxIdx > lastIdx {
                 emptyDays = Array(0..<maxIdx - lastIdx).compactMap({ (idx) -> Day in

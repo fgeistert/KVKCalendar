@@ -10,9 +10,16 @@
 import UIKit
 import EventKit
 
+@available(swift, deprecated: 0.6.5, obsoleted: 0.6.6, renamed: "CellParameter")
 public struct DateParameter {
     public var date: Date?
     public var type: DayType?
+}
+
+public struct CellParameter {
+    public var date: Date?
+    public var type: DayType? = .empty
+    public var events: [Event] = []
 }
 
 public enum TimeHourSystem: Int {
@@ -27,7 +34,7 @@ public enum TimeHourSystem: Int {
     var hours: [String] {
         switch self {
         case .twelveHour, .twelve:
-            let array = ["12"] + Array(1...11).map({ String($0) })
+            let array = ["12"] + Array(1...11).map { String($0) }
             let am = array.map { $0 + " AM" } + ["Noon"]
             var pm = array.map { $0 + " PM" }
             
@@ -37,26 +44,19 @@ public enum TimeHourSystem: Int {
             }
             return am + pm
         case .twentyFourHour, .twentyFour:
-            let array = ["00:00"] + Array(1...24).map({ (i) -> String in
+            let array = ["00:00"] + Array(1...24).map { (i) -> String in
                 let i = i % 24
                 var string = i < 10 ? "0" + "\(i)" : "\(i)"
                 string.append(":00")
                 return string
-            })
+            }
             return array
         }
     }
     
-    @available(*, deprecated, renamed: "current")
+    @available(swift, deprecated: 0.5.8, obsoleted: 0.5.9, renamed: "current")
     public static var currentSystemOnDevice: TimeHourSystem? {
-        let locale = NSLocale.current
-        guard let formatter = DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: locale) else { return nil }
-        
-        if formatter.contains("a") {
-            return .twelve
-        } else {
-            return .twentyFour
-        }
+        current
     }
     
     public static var current: TimeHourSystem? {
@@ -84,6 +84,14 @@ public enum CalendarType: String, CaseIterable {
     case day, week, month, year, list
 }
 
+extension CalendarType: Identifiable {
+    
+    public var id: CalendarType {
+        self
+    }
+    
+}
+
 // MARK: Event model
 
 @available(swift, deprecated: 0.4.1, obsoleted: 0.4.2, renamed: "Event.Color")
@@ -97,12 +105,34 @@ public struct EventColor {
     }
 }
 
+public struct TextEvent {
+    public let timeline: String
+    public let month: String?
+    public let list: String?
+    
+    public init(timeline: String = "", month: String? = nil, list: String? = nil) {
+        self.timeline = timeline
+        self.month = month
+        self.list = list
+    }
+    
+    public init(_ text: String) {
+        self.timeline = text
+        self.month = text
+        self.list = text
+    }
+}
+
 public struct Event {
     static let idForNewEvent = "-999"
     
     /// unique identifier of Event
     public var ID: String
+    
+    @available(swift, deprecated: 0.5.8, obsoleted: 0.5.9, renamed: "title")
     public var text: String = ""
+    public var title: TextEvent = TextEvent()
+    
     public var start: Date = Date()
     public var end: Date = Date()
     public var color: Event.Color? = Event.Color(.systemBlue) {
@@ -114,11 +144,14 @@ public struct Event {
             textColor = value.text
         }
     }
-    public var backgroundColor: UIColor = UIColor.systemBlue.withAlphaComponent(0.3)
+    public var backgroundColor: UIColor = .systemBlue.withAlphaComponent(0.3)
     public var textColor: UIColor = .white
     public var isAllDay: Bool = false
     public var isContainsFile: Bool = false
+    
+    @available(swift, deprecated: 0.5.8, obsoleted: 0.5.9, renamed: "title")
     public var textForMonth: String = ""
+    @available(swift, deprecated: 0.5.8, obsoleted: 0.5.9, renamed: "title")
     public var textForList: String = ""
     
     @available(swift, deprecated: 0.4.6, obsoleted: 0.4.7, renamed: "data")
@@ -127,12 +160,31 @@ public struct Event {
     
     public var recurringType: Event.RecurringType = .none
     
-    ///individual event customization
+    ///custom style
     ///(in-progress) works only with a default height
     public var style: EventStyle? = nil
+    public var systemEvent: EKEvent? = nil
     
     public init(ID: String) {
         self.ID = ID
+        
+        if let tempColor = color {
+            let value = prepareColor(tempColor)
+            backgroundColor = value.background
+            textColor = value.text
+        }
+    }
+    
+    public init(event: EKEvent, monthTitle: String? = nil, listTitle: String? = nil) {
+        ID = event.eventIdentifier
+        title = TextEvent(timeline: event.title,
+                          month: monthTitle ?? event.title,
+                          list: listTitle ?? event.title)
+        start = event.startDate
+        end = event.endDate
+        color = Event.Color(UIColor(cgColor: event.calendar.cgColor))
+        isAllDay = event.isAllDay
+        systemEvent = event
         
         if let tempColor = color {
             let value = prepareColor(tempColor)
@@ -154,18 +206,50 @@ public struct Event {
 }
 
 extension Event {
+    
+    enum EventType: String {
+        case allDay, usual
+    }
+    
+}
+
+extension Event {
     var hash: Int {
-        return ID.hashValue
+        ID.hashValue
     }
 }
 
 public extension Event {
     var isNew: Bool {
-        return ID == Event.idForNewEvent
+        ID == Event.idForNewEvent
     }
     
     enum RecurringType: Int {
         case everyDay, everyWeek, everyMonth, everyYear, none
+        
+        var shift: Int {
+            switch self {
+            case .everyDay, .everyMonth, .everyYear:
+                return 1
+            case .everyWeek:
+                return 7
+            case .none:
+                return 0
+            }
+        }
+        
+        var component: Calendar.Component {
+            switch self {
+            case .everyDay, .everyWeek:
+                return .day
+            case .everyMonth:
+                return .month
+            case .everyYear:
+                return .year
+            case .none:
+                return .nanosecond
+            }
+        }
     }
     
     struct Color {
@@ -186,46 +270,45 @@ public enum RecurringType: Int {
 
 extension Event: EventProtocol {
     public func compare(_ event: Event) -> Bool {
-        return hash == event.hash
+        hash == event.hash
     }
 }
 
 extension Event {
-    func updateDate(newDate: Date?, calendar: Calendar = Calendar.current) -> Event? {
+    func updateDate(newDate: Date, calendar: Calendar = Calendar.current) -> Event? {
         var startComponents = DateComponents()
-        startComponents.year = newDate?.year
-        startComponents.month = newDate?.month
-        startComponents.hour = start.hour
-        startComponents.minute = start.minute
+        startComponents.year = newDate.kvkYear
+        startComponents.month = newDate.kvkMonth
+        startComponents.hour = start.kvkHour
+        startComponents.minute = start.kvkMinute
         
         var endComponents = DateComponents()
-        endComponents.year = newDate?.year
-        endComponents.month = newDate?.month
-        endComponents.hour = end.hour
-        endComponents.minute = end.minute
+        endComponents.year = newDate.kvkYear
+        endComponents.month = newDate.kvkMonth
+        endComponents.hour = end.kvkHour
+        endComponents.minute = end.kvkMinute
         
+        let newDay = newDate.kvkDay
         switch recurringType {
         case .everyDay:
-            startComponents.day = newDate?.day
-        case .everyWeek where newDate?.weekday == start.weekday:
-            startComponents.day = newDate?.day
-            startComponents.weekday = newDate?.weekday
-            endComponents.weekday = newDate?.weekday
-        case .everyMonth where newDate?.month != start.month && newDate?.day == start.day:
-            startComponents.day = newDate?.day
-        case .everyYear where newDate?.year != start.year && newDate?.month == start.month && newDate?.day == start.day:
-            startComponents.day = newDate?.day
+            startComponents.day = newDay
+        case .everyWeek where newDate.kvkWeekday == start.kvkWeekday:
+            startComponents.day = newDay
+            startComponents.weekday = newDate.kvkWeekday
+            endComponents.weekday = newDate.kvkWeekday
+        case .everyMonth where (newDate.kvkYear != start.kvkYear || newDate.kvkMonth != start.kvkMonth) && newDate.kvkDay == start.kvkDay:
+            startComponents.day = newDay
+        case .everyYear where newDate.kvkYear != start.kvkYear && newDate.kvkMonth == start.kvkMonth && newDate.kvkDay == start.kvkDay:
+            startComponents.day = newDay
         default:
             return nil
         }
         
-        let offsetDay = end.day - start.day
-        if start.day == end.day {
-            endComponents.day = newDate?.day
-        } else if let newDay = newDate?.day {
-            endComponents.day = newDay + offsetDay
+        let offsetDay = end.kvkDay - start.kvkDay
+        if start.kvkDay == end.kvkDay {
+            endComponents.day = newDay
         } else {
-            endComponents.day = newDate?.day
+            endComponents.day = newDay + offsetDay
         }
         
         guard let newStart = calendar.date(from: startComponents),
@@ -248,20 +331,20 @@ public protocol EventProtocol {
 
 protocol CalendarSettingProtocol: AnyObject {
     
-    var style: Style { get }
+    var style: Style { get set }
     
     func reloadFrame(_ frame: CGRect)
-    func updateStyle(_ style: Style)
+    func updateStyle(_ style: Style, force: Bool)
     func reloadData(_ events: [Event])
-    func setDate(_ date: Date)
-    func setUI()
+    func setDate(_ date: Date, animated: Bool)
     
 }
 
 extension CalendarSettingProtocol {
     
     func reloadData(_ events: [Event]) {}
-    func setDate(_ date: Date) {}
+    func setDate(_ date: Date, animated: Bool) {}
+    func setUI(reload: Bool = false) {}
     
 }
 
@@ -271,7 +354,7 @@ public protocol CalendarDataSource: AnyObject {
     /// get events to display on view
     /// also this method returns a system events from iOS calendars if you set the property `systemCalendar` in style
     func eventsForCalendar(systemEvents: [EKEvent]) -> [Event]
-    
+        
     func willDisplayDate(_ date: Date?, events: [Event])
     
     /// Use this method to add a custom event view
@@ -304,7 +387,7 @@ public protocol CalendarDataSource: AnyObject {
     func dequeueListCell(date: Date?, tableView: UITableView, indexPath: IndexPath) -> UITableViewCell?
     
     /// Use this method to add a custom day cell
-    func dequeueCell<T: UIScrollView>(dateParameter: DateParameter, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarCellProtocol?
+    func dequeueCell<T: UIScrollView>(parameter: CellParameter, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarCellProtocol?
     
     /// Use this method to add a header view
     func dequeueHeader<T: UIScrollView>(date: Date?, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarHeaderProtocol?
@@ -312,10 +395,21 @@ public protocol CalendarDataSource: AnyObject {
     @available(iOS 14.0, *)
     func willDisplayEventOptionMenu(_ event: Event, type: CalendarType) -> (menu: UIMenu, customButton: UIButton?)?
     
+    /// Use this method to create a custom content view
     func dequeueMonthViewEvents(_ events: [Event], date: Date, frame: CGRect) -> UIView?
+    
+    /// Use this method to create a custom all day event
+    func dequeueAllDayViewEvent(_ event: Event, date: Date, frame: CGRect) -> UIView?
+    
+    func dequeueTimeLabel(_ label: TimelineLabel) -> (current: TimelineLabel, others: [UILabel])?
+    
+    func dequeueCornerHeader(date: Date, frame: CGRect) -> UIView?
+    
+    func dequeueAllDayCornerHeader(date: Date, frame: CGRect) -> UIView?
 }
 
 public extension CalendarDataSource {
+    
     func willDisplayHeaderView(date: Date?, frame: CGRect, type: CalendarType) -> UIView? { nil }
     
     func willDisplayEventViewer(date: Date, frame: CGRect) -> UIView? { nil }
@@ -334,21 +428,29 @@ public extension CalendarDataSource {
 
     func dequeueListCell(date: Date?, tableView: UITableView, indexPath: IndexPath) -> UITableViewCell? { nil }
     
-    func dequeueCell<T: UIScrollView>(dateParameter: DateParameter, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarCellProtocol? { nil }
+    func dequeueCell<T: UIScrollView>(parameter: CellParameter, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarCellProtocol? { nil }
     
     func dequeueHeader<T: UIScrollView>(date: Date?, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarHeaderProtocol? { nil }
     
     @available(iOS 14.0, *)
-    func willDisplayEventOptionMenu(_ event: Event, type: CalendarType) -> (menu: UIMenu, customButton: UIButton?)? {
-        nil
-    }
+    func willDisplayEventOptionMenu(_ event: Event, type: CalendarType) -> (menu: UIMenu, customButton: UIButton?)? { nil }
     
     func dequeueMonthViewEvents(_ events: [Event], date: Date, frame: CGRect) -> UIView? { nil }
+    
+    func dequeueAllDayViewEvent(_ event: Event, date: Date, frame: CGRect) -> UIView? { nil }
+    
+    func dequeueTimeLabel(_ label: TimelineLabel) -> (current: TimelineLabel, others: [UILabel])? { nil }
+    
+    func dequeueCornerHeader(date: Date, frame: CGRect) -> UIView? { nil }
+    
+    func dequeueAllDayCornerHeader(date: Date, frame: CGRect) -> UIView? { nil }
+    
 }
 
 // MARK: - Delegate protocol
 
 public protocol CalendarDelegate: AnyObject {
+    
     func sizeForHeader(_ date: Date?, type: CalendarType) -> CGSize?
     
     /// size cell for (month, year, list) view
@@ -453,15 +555,17 @@ extension DisplayDelegate {
 // MARK: - EKEvent
 
 public extension EKEvent {
+    
+    @available(swift, deprecated: 0.5.8, obsoleted: 0.5.9, message: "Please use a constructor Event(event: _)")
     func transform(text: String? = nil, textForMonth: String? = nil, textForList: String? = nil) -> Event {
         var event = Event(ID: eventIdentifier)
-        event.text = text ?? title
+        event.title = TextEvent(timeline: text ?? title,
+                                month: textForMonth ?? title,
+                                list: textForList ?? title)
         event.start = startDate
         event.end = endDate
         event.color = Event.Color(UIColor(cgColor: calendar.cgColor))
         event.isAllDay = isAllDay
-        event.textForMonth = textForMonth ?? title
-        event.textForList = textForList ?? title
         return event
     }
 }
@@ -476,5 +580,36 @@ extension UITableViewCell: KVKCalendarCellProtocol {}
 public protocol KVKCalendarHeaderProtocol: AnyObject {}
 
 extension UIView: KVKCalendarHeaderProtocol {}
+
+// MARK: - Scrollable Week settings
+
+protocol ScrollableWeekProtocol: AnyObject {
+    
+    var daysBySection: [[Day]] { get set }
+}
+
+extension ScrollableWeekProtocol {
+    
+    func prepareDays(_ days: [Day], maxDayInWeek: Int) -> [[Day]] {
+        var daysBySection: [[Day]] = []
+        var idx = 0
+        var stop = false
+        
+        while !stop {
+            var endIdx = idx + maxDayInWeek
+            if endIdx > days.count {
+                endIdx = days.count
+            }
+            let items = Array(days[idx..<endIdx])
+            daysBySection.append(items)
+            idx += maxDayInWeek
+            if idx > days.count - 1 {
+                stop = true
+            }
+        }
+        
+        return daysBySection
+    }
+}
 
 #endif

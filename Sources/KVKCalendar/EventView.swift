@@ -44,9 +44,10 @@ final class EventView: EventViewGeneral {
         
         textFrame.size.height = textFrame.height
         textFrame.size.width = textFrame.width - pointX
+        textView.textContainerInset = style.event.textContainerInset
         textView.frame = textFrame
         textView.font = style.timeline.eventFont
-        textView.text = event.text
+        textView.text = event.title.timeline
         
         if isSelected {
             backgroundColor = color
@@ -85,9 +86,9 @@ final class EventView: EventViewGeneral {
                 iconFileImageView.isHidden = true
             }
         }
-        #if !targetEnvironment(macCatalyst)
+        
         button.menu = menu
-        #endif
+        addPointInteraction(on: button, delegate: self)
         addSubview(button)
     }
     

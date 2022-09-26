@@ -14,13 +14,14 @@
 **Additional features:**
 - [x] Dark mode
 - [ ] Skeleton loading (month/list)
-- [x] Zoom (day/week)
 - [x] Custom event view
 - [x] Custom date cell
 - [x] Custom header view and collection view
 - [x] Custom calendar localization
+- [x] Event list mode for weekly viewing
 - [x] Ability to set a divider line (day/week)
-- [x] UIMenu supports in event view (iOS 14.0 and above)
+- [x] [Supporting Multiple Windows on iPad](https://developer.apple.com/design/human-interface-guidelines/ios/system-capabilities/multitasking/)
+- [x] UIMenu supports in event view (iOS and Mac Catalyst 14.0+)
 - [x] [Ability to configure the frame for viewing events](https://github.com/kvyatkovskys/KVKCalendar/pull/198)
 
 ## Need Help?
@@ -31,7 +32,7 @@ Please, use [Issues](https://github.com/kvyatkovskys/KVKCalendar/issues) only fo
 
 ## Requirements
 
-- iOS 10.0+, iPadOS 10.0+, MacOS 10.15+ (Supports Mac Catalyst)
+- iOS 10.0+, iPadOS 10.0+, MacOS 11.0+ (supports Mac Catalyst)
 - Swift 5.0+
 
 ## Installation
@@ -86,8 +87,9 @@ class ViewController: UIViewController {
         }
     }
     
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+        // to track changing frame when an user rotates device
         calendarView.reloadFrame(view.frame)
     }
 }
@@ -121,7 +123,7 @@ extension ViewController: CalendarDataSource {
     func eventsForCalendar(systemEvents: [EKEvent]) -> [Event] {
         // if you want to get events from iOS calendars
         // set calendar names to style.systemCalendars = ["Test"]
-        let mappedEvents = systemEvents.compactMap({ $0.transform() })
+        let mappedEvents = systemEvents.compactMap { Event(event: $0) }
         return events + mappedEvents
     }
 }
@@ -154,7 +156,7 @@ func willDisplayEventView(_ event: Event, frame: CGRect, date: Date?) -> EventVi
 
 To use a custom date cell, just subscribe on this optional method from `CalendarDataSource` (works for Day/Week/Month/Year views).
 ```swift
-func dequeueCell<T>(date: Date?, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarCellProtocol? where T: UIScrollView { 
+func dequeueCell<T>(parameter: CellParameter, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarCellProtocol? where T: UIScrollView { 
     switch type {
     case .year:
         let cell = (view as? UICollectionView)?.dequeueCell(indexPath: indexPath) { (cell: CustomYearCell) in
@@ -196,7 +198,6 @@ struct CalendarDisplayView: UIViewRepresentable {
     func makeUIView(context: UIViewRepresentableContext<CalendarDisplayView>) -> CalendarView {
         calendar.dataSource = context.coordinator
         calendar.delegate = context.coordinator
-        calendar.reloadData()
         return calendar
     }
     

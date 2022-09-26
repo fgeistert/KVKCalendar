@@ -73,7 +73,7 @@ final class MonthCell: KVKCollectionViewCell {
         
     var events: [Event] = [] {
         didSet {
-            contentView.subviews.filter({ $0.tag != defaultTagView }).forEach({ $0.removeFromSuperview() })
+            contentView.subviews.filter { $0.tag != defaultTagView }.forEach { $0.removeFromSuperview() }
             
             guard bounds.height > (dateLabel.bounds.height + 10) && day.type != .empty else {
                 if monthStyle.showDatesForOtherMonths {
@@ -82,9 +82,7 @@ final class MonthCell: KVKCollectionViewCell {
                 return
             }
             
-            if UIDevice.current.userInterfaceIdiom == .phone, UIDevice.current.orientation.isLandscape {
-                return
-            }
+            if Platform.currentInterface == .phone && UIDevice.current.orientation.isLandscape { return }
             
             if monthStyle.showMonthNameInFirstDay {
                 showMonthName(day: day)
@@ -126,7 +124,7 @@ final class MonthCell: KVKCollectionViewCell {
                     label.minimumScaleFactor = 0.95
                     label.textAlignment = .center
                     let tap = UITapGestureRecognizer(target: self, action: #selector(tapOnMore))
-                    label.tag = event.start.day
+                    label.tag = event.start.kvkDay
                     label.addGestureRecognizer(tap)
                     label.textColor = monthStyle.colorMoreTitle
                     
@@ -147,7 +145,7 @@ final class MonthCell: KVKCollectionViewCell {
                     }
                     return
                 } else {
-                    if !event.isAllDay || UIDevice.current.userInterfaceIdiom == .phone {
+                    if !event.isAllDay || Platform.currentInterface == .phone {
                         label.attributedText = addIconBeforeLabel(eventList: [event],
                                                                   textAttributes: [.font: monthStyle.fontEventTitle,
                                                                                    .foregroundColor: monthStyle.colorEventTitle],
@@ -166,7 +164,7 @@ final class MonthCell: KVKCollectionViewCell {
                         label.textAlignment = .left
                         label.backgroundColor = event.color?.value ?? .systemGray
                         label.textColor = allDayStyle.textColor
-                        label.text = " \(event.text) "
+                        label.text = " \(event.title.timeline) "
                         label.setRoundCorners(monthStyle.eventCorners, radius: monthStyle.eventCornersRadius)
                     }
                     
@@ -174,7 +172,7 @@ final class MonthCell: KVKCollectionViewCell {
                     label.addGestureRecognizer(tap)
                     label.tag = event.hash
                     
-                    if style.event.states.contains(.move) && UIDevice.current.userInterfaceIdiom != .phone && !event.isAllDay {
+                    if style.event.states.contains(.move) && Platform.currentInterface != .phone && !event.isAllDay {
                         label.addGestureRecognizer(longGesture)
                         label.addGestureRecognizer(panGesture)
                     }
@@ -191,13 +189,13 @@ final class MonthCell: KVKCollectionViewCell {
             switch day.type {
             case .empty:
                 if let tempDate = day.date, monthStyle.showDatesForOtherMonths {
-                    dateLabel.text = "\(tempDate.day)"
+                    dateLabel.text = "\(tempDate.kvkDay)"
                     dateLabel.textColor = monthStyle.colorNameEmptyDay
                 } else {
                     dateLabel.text = nil
                 }
             default:
-                if let tempDay = day.date?.day {
+                if let tempDay = day.date?.kvkDay {
                     dateLabel.text = "\(tempDay)"
                 } else {
                     dateLabel.text = nil
@@ -205,7 +203,7 @@ final class MonthCell: KVKCollectionViewCell {
             }
 
             if !monthStyle.isHiddenSeparator {
-                switch UIDevice.current.userInterfaceIdiom {
+                switch Platform.currentInterface {
                 case .phone:
                     let topLineLayer = CALayer()
                     topLineLayer.name = "line_layer"
@@ -244,7 +242,7 @@ final class MonthCell: KVKCollectionViewCell {
     }
     
     @objc private func tapOnMore(gesture: UITapGestureRecognizer) {
-        if let idx = events.firstIndex(where: { $0.start.day == gesture.view?.tag }) {
+        if let idx = events.firstIndex(where: { $0.start.kvkDay == gesture.view?.tag }) {
             let location = gesture.location(in: superview)
             let newFrame = CGRect(x: location.x, y: location.y,
                                   width: gesture.view?.frame.width ?? 0,
@@ -257,7 +255,7 @@ final class MonthCell: KVKCollectionViewCell {
         super.init(frame: frame)
         
         var dateFrame = frame
-        if UIDevice.current.userInterfaceIdiom == .pad {
+        if Platform.currentInterface != .phone {
             dateFrame.size = CGSize(width: 30, height: 30)
             dateFrame.origin.x = (frame.width - dateFrame.width) - offset
         } else {
@@ -284,7 +282,7 @@ final class MonthCell: KVKCollectionViewCell {
                                                y: dateLabel.frame.origin.y,
                                                width: 50,
                                                height: dateLabel.bounds.height))
-        if let date = day.date, date.day == 1, UIDevice.current.userInterfaceIdiom != .phone {
+        if let date = day.date, date.kvkDay == 1, Platform.currentInterface != .phone {
             monthLabel.textAlignment = .right
             monthLabel.textColor = dateLabel.textColor
             monthLabel.text = "\(date.titleForLocale(style.locale, formatter: monthStyle.shortInDayMonthFormatter))".capitalized
@@ -307,10 +305,7 @@ final class MonthCell: KVKCollectionViewCell {
         switch gesture.state {
         case .began:
             guard let idx = events.firstIndex(where: { $0.hash == gesture.view?.tag }),
-                  let view = gesture.view else
-            {
-                return
-            }
+                  let view = gesture.view else { return }
             
             let event = events[idx]
             let snapshotLabel = UILabel(frame: view.frame)
@@ -349,7 +344,7 @@ final class MonthCell: KVKCollectionViewCell {
         }
         
         if weekend {
-            switch UIDevice.current.userInterfaceIdiom {
+            switch Platform.currentInterface {
             case .phone where day.type == .empty:
                 view.backgroundColor = UIColor.clear
             default:
@@ -364,8 +359,8 @@ final class MonthCell: KVKCollectionViewCell {
         
         guard day.type != .empty else { return }
         
-        guard date?.year == nowDate.year else {
-            if date?.year == selectDate.year && date?.month == selectDate.month && date?.day == selectDate.day {
+        guard date?.kvkYear == nowDate.kvkYear else {
+            if date?.isEqual(selectDate) == true {
                 label.textColor = monthStyle.colorSelectDate
                 label.backgroundColor = monthStyle.colorBackgroundSelectDate
                 label.layer.cornerRadius = label.frame.height / 2
@@ -374,8 +369,8 @@ final class MonthCell: KVKCollectionViewCell {
             return
         }
         
-        guard date?.month == nowDate.month else {
-            if selectDate.day == date?.day && selectDate.month == date?.month {
+        guard date?.kvkMonth == nowDate.kvkMonth else {
+            if selectDate.kvkDay == date?.kvkDay && selectDate.kvkMonth == date?.kvkMonth {
                 label.textColor = monthStyle.colorSelectDate
                 label.backgroundColor = monthStyle.colorBackgroundSelectDate
                 label.layer.cornerRadius = label.frame.height / 2
@@ -384,8 +379,8 @@ final class MonthCell: KVKCollectionViewCell {
             return
         }
         
-        guard date?.day == nowDate.day else {
-            if selectDate.day == date?.day && date?.month == selectDate.month {
+        guard date?.kvkDay == nowDate.kvkDay else {
+            if selectDate.kvkDay == date?.kvkDay && date?.kvkMonth == selectDate.kvkMonth {
                 label.textColor = monthStyle.colorSelectDate
                 label.backgroundColor = monthStyle.colorBackgroundSelectDate
                 label.layer.cornerRadius = label.frame.height / 2
@@ -394,8 +389,8 @@ final class MonthCell: KVKCollectionViewCell {
             return
         }
         
-        guard selectDate.day == date?.day && selectDate.month == date?.month else {
-            if date?.day == nowDate.day {
+        guard selectDate.kvkDay == date?.kvkDay && selectDate.kvkMonth == date?.kvkMonth else {
+            if date?.kvkDay == nowDate.kvkDay {
                 label.textColor = monthStyle.colorTitleCurrentDate
                 label.backgroundColor = .clear
             }
@@ -408,9 +403,16 @@ final class MonthCell: KVKCollectionViewCell {
         label.clipsToBounds = true
     }
     
-    private func addIconBeforeLabel(eventList: [Event], textAttributes: [NSAttributedString.Key: Any], bulletAttributes: [NSAttributedString.Key: Any], timeAttributes: [NSAttributedString.Key: Any], bullet: String = "\u{2022}", indentation: CGFloat = 10, lineSpacing: CGFloat = 2, paragraphSpacing: CGFloat = 10) -> NSAttributedString {
+    private func addIconBeforeLabel(eventList: [Event],
+                                    textAttributes: [NSAttributedString.Key: Any],
+                                    bulletAttributes: [NSAttributedString.Key: Any],
+                                    timeAttributes: [NSAttributedString.Key: Any],
+                                    bullet: String = "\u{2022}",
+                                    indentation: CGFloat = 10,
+                                    lineSpacing: CGFloat = 2,
+                                    paragraphSpacing: CGFloat = 10) -> NSAttributedString {
         let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.alignment = UIDevice.current.userInterfaceIdiom == .pad ? .left : .center
+        paragraphStyle.alignment = Platform.currentInterface != .phone ? .left : .center
         paragraphStyle.tabStops = [NSTextTab(textAlignment: .left, location: indentation, options: [:])]
         paragraphStyle.defaultTabInterval = indentation
         paragraphStyle.lineSpacing = lineSpacing
@@ -423,7 +425,7 @@ final class MonthCell: KVKCollectionViewCell {
             if monthStyle.isHiddenEventTitle {
                 text = ""
             } else {
-                text = event.textForMonth
+                text = event.title.month ?? ""
             }
             
             let formattedString: String
@@ -436,7 +438,7 @@ final class MonthCell: KVKCollectionViewCell {
             let string: NSString = NSString(string: formattedString)
             
             let rangeForText = NSMakeRange(0, attributedString.length)
-            attributedString.addAttributes([NSAttributedString.Key.paragraphStyle: paragraphStyle], range: rangeForText)
+            attributedString.addAttributes([.paragraphStyle: paragraphStyle], range: rangeForText)
             attributedString.addAttributes(textAttributes, range: rangeForText)
             
             if !monthStyle.isHiddenDotInTitle {
@@ -450,13 +452,12 @@ final class MonthCell: KVKCollectionViewCell {
     
     override func setSkeletons(_ skeletons: Bool,
                                insets: UIEdgeInsets = UIEdgeInsets(top: 4, left: 4, bottom: 4, right: 4),
-                               cornerRadius: CGFloat = 2)
-    {
+                               cornerRadius: CGFloat = 2) {
         dateLabel.isHidden = skeletons
         
         let stubView = UIView(frame: bounds)
         if skeletons {
-            contentView.subviews.filter({ $0.tag != defaultTagView }).forEach({ $0.removeFromSuperview() })
+            contentView.subviews.filter { $0.tag != defaultTagView }.forEach { $0.removeFromSuperview() }
             contentView.addSubview(stubView)
             stubView.setAsSkeleton(skeletons, cornerRadius: cornerRadius, insets: insets)
         } else {
@@ -467,13 +468,17 @@ final class MonthCell: KVKCollectionViewCell {
 }
 
 extension MonthCell: UIGestureRecognizerDelegate {
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
+    
 }
 
 @available(iOS 13.4, *)
 extension MonthCell: PointerInteractionProtocol {
+    
     func pointerInteraction(_ interaction: UIPointerInteraction, styleFor region: UIPointerRegion) -> UIPointerStyle? {
         var pointerStyle: UIPointerStyle?
         
@@ -483,6 +488,7 @@ extension MonthCell: PointerInteractionProtocol {
         }
         return pointerStyle
     }
+    
 }
 
 protocol MonthCellDelegate: AnyObject {

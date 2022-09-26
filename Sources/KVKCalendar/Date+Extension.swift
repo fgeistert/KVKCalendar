@@ -14,73 +14,73 @@ public extension Date {
     }
     
     var isSunday: Bool {
-        return weekday == 1
+        kvkWeekday == 1
     }
     
     var isSaturday: Bool {
-        return weekday == 7
+        kvkWeekday == 7
     }
     
     var isWeekend: Bool {
-        return isSunday || isSaturday
+        isSunday || isSaturday
     }
     
     var isWeekday: Bool {
-        return !isWeekend
+        !isWeekend
     }
     
-    var minute: Int {
+    var kvkMinute: Int {
         let calendar = Calendar.current
         let component = calendar.dateComponents([.minute], from: self)
         return component.minute ?? 0
     }
     
-    var hour: Int {
+    var kvkHour: Int {
         let calendar = Calendar.current
         let component = calendar.dateComponents([.hour], from: self)
         return component.hour ?? 0
     }
     
-    var day: Int {
+    var kvkDay: Int {
         let calendar = Calendar.current
         let component = calendar.dateComponents([.day], from: self)
         return component.day ?? 0
     }
     
-    var weekday: Int {
+    var kvkWeekday: Int {
         let calendar = Calendar.current
         let component = calendar.dateComponents([.weekday], from: self)
         return component.weekday ?? 0
     }
     
-    var month: Int {
+    var kvkMonth: Int {
         let calendar = Calendar.current
         let component = calendar.dateComponents([.month], from: self)
         return component.month ?? 0
     }
     
-    var year: Int {
+    var kvkYear: Int {
         let calendar = Calendar.current
         let component = calendar.dateComponents([.year], from: self)
         return component.year ?? 0
     }
     
-    var startOfDay: Date? {
+    var kvkStartOfDay: Date {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = TimeZone.current
         return gregorian.startOfDay(for: self)
     }
     
-    var endOfDay: Date? {
+    var kvkEndOfDay: Date? {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = TimeZone.current
         var components = DateComponents()
         components.day = 1
         components.second = -1
-        return gregorian.date(byAdding: components, to: startOfDay ?? self)
+        return gregorian.date(byAdding: components, to: kvkStartOfDay)
     }
     
-    var startMondayOfWeek: Date? {
+    var kvkStartMondayOfWeek: Date? {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.firstWeekday = 2
         gregorian.timeZone = TimeZone.current
@@ -90,47 +90,47 @@ public extension Date {
         return startDate
     }
     
-    var startSundayOfWeek: Date? {
+    var kvkStartSundayOfWeek: Date? {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = TimeZone.current
         let sunday = gregorian.date(from: gregorian.dateComponents([.yearForWeekOfYear, .weekOfYear], from: self))
         return sunday
     }
     
-    var endSundayOfWeek: Date? {
+    var kvkEndSundayOfWeek: Date? {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = TimeZone.current
-        return gregorian.date(byAdding: .day, value: 6, to: startMondayOfWeek ?? self)
+        return gregorian.date(byAdding: .day, value: 6, to: kvkStartMondayOfWeek ?? self)
     }
     
-    var endSaturdayOfWeek: Date? {
+    var kvkEndSaturdayOfWeek: Date? {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = TimeZone.current
-        return gregorian.date(byAdding: .day, value: 6, to: startSundayOfWeek ?? self)
+        return gregorian.date(byAdding: .day, value: 6, to: kvkStartSundayOfWeek ?? self)
     }
     
-    var startOfMonth: Date? {
+    var kvkStartOfMonth: Date? {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = TimeZone.current
         return gregorian.date(from: gregorian.dateComponents([.year, .month], from: self))
     }
     
-    var endOfMonth: Date? {
+    var kvkEndOfMonth: Date? {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = TimeZone.current
         var components = DateComponents()
         components.month = 1
         components.second = -1
-        return gregorian.date(byAdding: components, to: startOfMonth ?? self)
+        return gregorian.date(byAdding: components, to: kvkStartOfMonth ?? self)
     }
     
-    func toGlobalTime() -> Date {
+    func kvkToGlobalTime() -> Date {
         let timezone = TimeZone.current
         let seconds = -TimeInterval(timezone.secondsFromGMT(for: self))
         return Date(timeInterval: seconds, since: self)
     }
     
-    func toLocalTime() -> Date {
+    func kvkToLocalTime() -> Date {
         let timezone = TimeZone.current
         let seconds = TimeInterval(timezone.secondsFromGMT(for: self))
         return Date(timeInterval: seconds, since: self)
@@ -142,5 +142,22 @@ public extension Date {
         components.second = Int(value)
         let date = Calendar.current.date(byAdding: components, to: self)
         return date ?? self
+    }
+        
+    func isSameDay(otherDate: Date) -> Bool {
+        let diff = Calendar.current.dateComponents([.day], from: self, to: otherDate)
+        return diff.day == 0
+    }
+    
+    func addingTo(_ component: Calendar.Component, value: Int) -> Date? {
+        if let newDate = Calendar.current.date(byAdding: component, value: value, to: self) {
+            return newDate
+        }
+        
+        return nil
+    }
+    
+    func isEqual(_ date: Date) -> Bool {
+        date.kvkYear == kvkYear && date.kvkMonth == kvkMonth && date.kvkDay == kvkDay
     }
 }
