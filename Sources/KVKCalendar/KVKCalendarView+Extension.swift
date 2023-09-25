@@ -1,5 +1,5 @@
 //
-//  CalendarView+Extension.swift
+//  KVKCalendarView+Extension.swift
 //  KVKCalendar
 //
 //  Created by Sergei Kviatkovskii on 14.12.2020.
@@ -10,7 +10,7 @@
 import UIKit
 import EventKit
 
-extension CalendarView {
+extension KVKCalendarView {
     // MARK: Public methods
     
     /// **DEPRECATED**
@@ -180,11 +180,25 @@ extension CalendarView {
     private func requestAccessSystemCalendars(_ calendars: Set<String>,
                                               store: EKEventStore,
                                               completion: @escaping (Bool) -> Void) {
-        let status = EKEventStore.authorizationStatus(for: .event)
-        
-        store.requestAccess(to: .event) { (access, error) in
-            print("System calendars = \(calendars) - access = \(access), error = \(error?.localizedDescription ?? "nil"), status = \(status.rawValue)")
+        func proxyCompletion(access: Bool, status: EKAuthorizationStatus, error: Error?) {
+            print("System calendars = \(calendars) - access = \(access), error = \(error?.localizedDescription ?? "nil"), status = \(status)")
             completion(access)
+        }
+        let status = EKEventStore.authorizationStatus(for: .event)
+        switch status {
+        case .authorized:
+            completion(true)
+        default:
+            //           temporary disabled
+            //            if #available(iOS 17.0, *) {
+            //                store.requestFullAccessToEvents { (access, error) in
+            //                    proxyCompletion(access: access, status: status, error: error)
+            //                }
+            //            } else {
+            store.requestAccess(to: .event) { (access, error) in
+                proxyCompletion(access: access, status: status, error: error)
+            }
+            //            }
         }
     }
     
@@ -225,7 +239,7 @@ extension CalendarView {
     }
 }
 
-extension CalendarView: DisplayDataSource {
+extension KVKCalendarView: DisplayDataSource {
     public func dequeueCell<T>(parameter: CellParameter, type: CalendarType, view: T, indexPath: IndexPath) -> KVKCalendarCellProtocol? where T : UIScrollView {
         dataSource?.dequeueCell(parameter: parameter, type: type, view: view, indexPath: indexPath)
     }
@@ -276,13 +290,17 @@ extension CalendarView: DisplayDataSource {
         dataSource?.dequeueAllDayCornerHeader(date: date, frame: frame)
     }
 
-    public func dequeueCornerHeader(date: Date, frame: CGRect) -> UIView? {
-        dataSource?.dequeueCornerHeader(date: date, frame: frame)
+    public func dequeueCornerHeader(date: Date, frame: CGRect, type: CalendarType) -> UIView? {
+        dataSource?.dequeueCornerHeader(date: date, frame: frame, type: type)
+    }
+    
+    public func willDisplaySectionsInListView(_ sections: [ListViewData.SectionListView]) {
+        dataSource?.willDisplaySectionsInListView(sections)
     }
     
 }
 
-extension CalendarView: DisplayDelegate {
+extension KVKCalendarView: DisplayDelegate {
     public func sizeForHeader(_ date: Date?, type: CalendarType) -> CGSize? {
         delegate?.sizeForHeader(date, type: type)
     }
@@ -330,9 +348,19 @@ extension CalendarView: DisplayDelegate {
     public func willSelectDate(_ date: Date, type: CalendarType) {
         delegate?.willSelectDate(date, type: type)
     }
+    
+    public func didUpdateStyle(_ style: Style, type: CalendarType) {
+        updateStyle(style)
+        reloadData()
+        delegate?.didUpdateStyle(style, type: type)
+    }
+    
+    public func didDisplayHeaderTitle(_ date: Date, style: Style, type: CalendarType) {
+        delegate?.didDisplayHeaderTitle(date, style: style, type: type)
+    }
 }
 
-extension CalendarView {
+extension KVKCalendarView {
     
     public var style: Style {
         get {

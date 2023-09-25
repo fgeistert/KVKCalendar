@@ -118,7 +118,7 @@ class DayCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         if #available(iOS 13.4, *) {
-            addPointInteraction(on: self, delegate: self)
+            addPointInteraction()
         }
     }
     
@@ -141,7 +141,7 @@ class DayCell: UICollectionViewCell {
     
     private func populateDay(date: Date?, colorText: UIColor) {
         let nowDate = Date()
-        if date?.isEqual(nowDate) == true {
+        if date?.kvkIsEqual(nowDate) == true {
             dateLabel.textColor = UIScreen.isDarkMode ? style.headerScroll.colorCurrentSelectDateForDarkStyle : style.headerScroll.colorCurrentDate
             dotView.backgroundColor = style.headerScroll.colorBackgroundCurrentDate
         } else {
@@ -150,21 +150,6 @@ class DayCell: UICollectionViewCell {
         }
         isSelected = false
     }
-}
-
-@available(iOS 13.4, *)
-extension DayCell: PointerInteractionProtocol {
-    
-    func pointerInteraction(_ interaction: UIPointerInteraction, styleFor region: UIPointerRegion) -> UIPointerStyle? {
-        var pointerStyle: UIPointerStyle?
-        
-        if let interactionView = interaction.view {
-            let targetedPreview = UITargetedPreview(view: interactionView)
-            pointerStyle = UIPointerStyle(effect: .highlight(targetedPreview))
-        }
-        return pointerStyle
-    }
-    
 }
 
 #endif

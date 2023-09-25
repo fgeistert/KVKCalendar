@@ -82,7 +82,7 @@ final class MonthCell: KVKCollectionViewCell {
                 return
             }
             
-            if Platform.currentInterface == .phone && UIDevice.current.orientation.isLandscape { return }
+            if Platform.currentInterface == .phone && UIApplication.shared.orientation.isLandscape { return }
             
             if monthStyle.showMonthNameInFirstDay {
                 showMonthName(day: day)
@@ -269,7 +269,7 @@ final class MonthCell: KVKCollectionViewCell {
         contentView.addSubview(dateLabel)
                 
         if #available(iOS 13.4, *) {
-            addPointInteraction(on: self, delegate: self)
+            contentView.addPointInteraction()
         }
     }
     
@@ -360,7 +360,7 @@ final class MonthCell: KVKCollectionViewCell {
         guard day.type != .empty else { return }
         
         guard date?.kvkYear == nowDate.kvkYear else {
-            if date?.isEqual(selectDate) == true {
+            if date?.kvkIsEqual(selectDate) == true {
                 label.textColor = monthStyle.colorSelectDate
                 label.backgroundColor = monthStyle.colorBackgroundSelectDate
                 label.layer.cornerRadius = label.frame.height / 2
@@ -472,21 +472,6 @@ extension MonthCell: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
-    }
-    
-}
-
-@available(iOS 13.4, *)
-extension MonthCell: PointerInteractionProtocol {
-    
-    func pointerInteraction(_ interaction: UIPointerInteraction, styleFor region: UIPointerRegion) -> UIPointerStyle? {
-        var pointerStyle: UIPointerStyle?
-        
-        if let interactionView = interaction.view {
-            let targetedPreview = UITargetedPreview(view: interactionView)
-            pointerStyle = UIPointerStyle(effect: .hover(targetedPreview))
-        }
-        return pointerStyle
     }
     
 }

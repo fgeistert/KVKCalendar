@@ -190,6 +190,7 @@ extension YearView: UICollectionViewDataSource {
             return collectionView.kvkDequeueView(indexPath: index) { (headerView: YearHeaderView) in
                 headerView.style = data.style
                 headerView.date = date
+                delegate?.didDisplayHeaderTitle(date, style: style, type: .year)
             }
         }
     }
@@ -197,7 +198,7 @@ extension YearView: UICollectionViewDataSource {
 
 extension YearView: UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        guard data.style.year.isAutoSelectDateScrolling else { return }
+        guard data.style.year.autoSelectionDateWhenScrolling else { return }
         
         let cells = collectionView?.indexPathsForVisibleItems ?? []
         let dates = cells.compactMap { data.sections[$0.section].months[$0.row].date }
@@ -229,7 +230,7 @@ extension YearView: UICollectionViewDelegate, UICollectionViewDelegateFlowLayout
         var width: CGFloat
         var height = collectionView.frame.height
         
-        if height > 0 {
+        if height > 0 && height >= data.style.year.heightTitleHeader {
             height -= data.style.year.heightTitleHeader
         }
         

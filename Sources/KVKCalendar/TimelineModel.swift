@@ -22,9 +22,10 @@ protocol TimelineDelegate: AnyObject {
     func nextDate()
     func previousDate()
     func swipeX(transform: CGAffineTransform, stop: Bool)
-    func didChangeEvent(_ event: Event, minute: Int, hour: Int, point: CGPoint, newDay: Int?)
+    func didChangeEvent(_ event: Event, minute: Int, hour: Int, point: CGPoint, newDate: Date?)
     func didAddNewEvent(_ event: Event, minute: Int, hour: Int, point: CGPoint)
     func didResizeEvent(_ event: Event, startTime: ResizeTime, endTime: ResizeTime)
+    func dequeueTimeLabel(_ label: TimelineLabel) -> (current: TimelineLabel, others: [UILabel])?
 }
 
 extension TimelineDelegate {
@@ -60,13 +61,13 @@ extension EventDateProtocol {
     func compareStartDate(_ date: Date?, with event: Event) -> Bool {
         guard let dt = date else { return false }
         
-        return event.start.isEqual(dt)
+        return event.start.kvkIsEqual(dt)
     }
     
     func compareEndDate(_ date: Date?, with event: Event) -> Bool {
         guard let dt = date else { return false }
         
-        return event.end.isEqual(dt)
+        return event.end.kvkIsEqual(dt)
     }
     
     func checkMultipleDate(_ date: Date?, with event: Event, checkMonth: Bool = false) -> Bool {
@@ -78,7 +79,6 @@ extension EventDateProtocol {
         
         let result = event.start.kvkDay != event.end.kvkDay
         && (startDate...endDate).contains(timeInterval)
-        && event.start.kvkYear == date?.kvkYear
         
         if checkMonth {
             return result && event.start.kvkMonth == date?.kvkMonth
